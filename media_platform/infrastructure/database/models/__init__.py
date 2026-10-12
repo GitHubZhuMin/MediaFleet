@@ -8,6 +8,12 @@ from media_platform.infrastructure.database.models.content_evaluation import (
     ContentEvaluationStepModel,
 )
 from media_platform.infrastructure.database.models.media_file import MediaFileModel
+from media_platform.infrastructure.database.models.image_analysis import (
+    ImageFrameModel,
+    ImageSampleModel,
+    ImageTaskNotificationModel,
+    ImageVideoModel,
+)
 from media_platform.infrastructure.database.models.media_node import MediaNodeModel
 from media_platform.infrastructure.database.models.media_stream_binding import (
     MediaStreamBindingModel,
@@ -22,6 +28,10 @@ __all__ = [
     "ContentEvaluationRecordModel",
     "ContentEvaluationStepModel",
     "MediaFileModel",
+    "ImageVideoModel",
+    "ImageSampleModel",
+    "ImageTaskNotificationModel",
+    "ImageFrameModel",
     "MediaNodeModel",
     "MediaStreamBindingModel",
     "MediaTaskModel",
