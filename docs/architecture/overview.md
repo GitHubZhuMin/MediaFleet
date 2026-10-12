@@ -92,7 +92,7 @@ flowchart TB
         Ops[运维控制台]
         SDK[Python SDK]
         CLI[只读 CLI]
-        Future[规划中的 MCP]
+        MCP[只读 MCP Server]
     end
 
     subgraph ControlPlane[控制平面]
@@ -122,7 +122,7 @@ flowchart TB
     Ops --> C1
     SDK --> C1
     CLI --> SDK
-    Future --> SDK
+    MCP --> SDK
     C1 <--> DB
     C2 <--> DB
     C1 <--> MQ
