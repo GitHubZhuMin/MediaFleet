@@ -38,3 +38,24 @@ SDK 访问控制平面 API，不能通过直接访问数据库或 RabbitMQ 绕�
 
 运行与变更风险相称的测试和静态检查。更新 `docs/project-status.md`，写明完成范围、验证、
 剩余风险和一个明确的下一步。持久架构决策发生变化时同步更新架构文档。
+
+## Cursor Cloud 开发环境
+
+Cloud Agent 每次启动会拉起本机 MySQL、RabbitMQ 和调用中心。调用中心监听
+`0.0.0.0:8008`，健康检查是 `http://127.0.0.1:8008/health`，接口文档是 `/api/docs`，
+运维控制台是 `/admin/`。
+
+本地开发使用仓库示例中的公开占位符 `change-me`：
+
+- MySQL：`127.0.0.1:3306`，用户 `mediafleet`，数据库 `mediafleet`
+- RabbitMQ：`127.0.0.1:5672`，用户 `guest`，节点名固定为 `rabbit@localhost`
+- 调用中心请求头 `X-API-Key: change-me`
+
+自动启动的调用中心设置了 `IGNORE_ENV_FILE=true` 和 `SERVICE_DOTENV_ENABLED=false`，
+不会读取仓库里的 `.env`。改完调用中心代码后，重启 tmux 会话
+`mediafleet-control-center`。
+
+依赖与 CI 一致，使用 uv `0.12.20` 和 `uv sync --frozen`。系统已提供 Python 3.12 和
+FFmpeg。`media-worker` 的 Torch、FunASR 等可选依赖默认不安装；处理离线 ASR 或目标检测时
+再执行 `uv sync --frozen --extra media-worker`。图像分析接单保持关闭。本环境不安装
+Docker，Compose 校验需要单独准备 Docker。
