@@ -116,6 +116,9 @@ uv run python -m compileall media_platform services alembic
 docker compose --env-file .env.example -f deploy/compose/docker-compose.yml config --quiet
 ```
 
+使用 Cursor Cloud Agent 时，仓库内的 `.cursor/environment.json` 会准备与 CI 对齐的 Python 和
+测试依赖。说明见[Cursor Cloud Agent 开发环境](docs/development/cursor-cloud-agent.md)。
+
 新增功能前请先阅读[文档导航](docs/README.md)和[扩展开发指南](docs/development/extending-mediafleet.md)。
 涉及消息契约时，必须同时检查所有生产者与消费者；涉及持久状态时，必须提供 Alembic
 迁移并说明升级与回滚影响。

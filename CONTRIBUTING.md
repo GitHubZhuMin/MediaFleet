@@ -26,6 +26,12 @@ Pull Request 至少说明：
 - 对部署、数据库迁移、消息兼容、性能和许可证的影响；
 - 已知风险与后续工作。
 
+## Cursor Cloud Agent
+
+仓库已提供共享的 Cloud Agent 环境，配置在 `.cursor/environment.json`。推送到 GitHub 后，
+从该仓库启动的 Cursor Cloud Agent 会使用同一套 Python 3.12、uv 和测试依赖。使用方式和
+密钥边界见[Cursor Cloud Agent 开发环境](docs/development/cursor-cloud-agent.md)。
+
 ## 测试要求
 
 变更应选择能证明关键行为的测试。常用命令：

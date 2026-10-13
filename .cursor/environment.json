@@ -1,0 +1,15 @@
+{
+  "name": "MediaFleet",
+  "user": "ubuntu",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "install": "bash .cursor/install.sh",
+  "ports": [
+    { "name": "control-center", "port": 8008 },
+    { "name": "media-worker", "port": 8009 },
+    { "name": "recorder-node", "port": 8010 },
+    { "name": "content-analysis", "port": 8012 },
+    { "name": "image-analysis", "port": 8013 }
+  ]
+}

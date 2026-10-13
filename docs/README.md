@@ -24,6 +24,7 @@
 ## 开发与运维
 
 - [扩展开发指南](development/extending-mediafleet.md)
+- [Cursor Cloud Agent 开发环境](development/cursor-cloud-agent.md)
 - [Docker Compose 部署](deployment/docker-compose.md)
 - [GitHub 仓库与分支保护清单](deployment/github.md)
 - [配置与密钥管理](security/configuration-and-secrets.md)

@@ -68,6 +68,9 @@ MediaFleet `0.1.0` 已迁移到个人 GitHub Public 仓库
   可恢复重试，推进到持久事实代次；当前代次仍在执行时继续保持租约互斥。
 - 新增 `20261012_0003` 增量迁移创建任务终态通知表，MySQL 外键列跟随现有任务主键字符定义，
   未修改可能已在环境执行的 `20261009_0002`。
+- 增加 Cursor Cloud Agent 共享环境：`.cursor/Dockerfile` 提供 Ubuntu 24.04、uv 0.12.20 和
+  FFmpeg；Build 执行幂等的 `uv sync --frozen --extra image-analysis`。默认不启动 MySQL、
+  RabbitMQ 或业务服务，图像分析接单与消费保持关闭。
 
 ## 验证
 
@@ -131,6 +134,8 @@ MediaFleet `0.1.0` 已迁移到个人 GitHub Public 仓库
   `/health` 返回正常，FFmpeg 5.1.9 可用。
 - Gitleaks `v8.28.0` 对本次涉及的应用、服务、迁移、测试和中文文档目录扫描未发现泄漏；
   旧业务名称、内部地址和凭据模式复核未发现新增内容。
+- Cloud Agent 安装脚本通过 `bash -n .cursor/install.sh`，`environment.json` 可被标准 JSON
+  解析。本机没有 Docker，自定义镜像尚未在 Cursor Build 上实际构建。
 
 ## 剩余风险
 
@@ -155,11 +160,13 @@ MediaFleet `0.1.0` 已迁移到个人 GitHub Public 仓库
   验证采样事件严格先于任务终态，并确认下游按 `eventType` 幂等消费。
 - MoviePy、ModelScope 和 Transformers 仍各有一个大版本升级 PR，需要结合媒体处理、模型
   加载和推理回归测试逐项评估，不能直接自动合并。
+- Cursor Cloud Agent 首次 Build 尚未在托管环境完成。配置推送前，Agent 仍使用 Cursor
+  默认镜像，不会自动获得本仓库的 uv 虚拟环境。
 
 ## 下一步
 
-完成全量测试、MySQL 增量迁移升降级、图像分析镜像构建和源码泄漏扫描，再创建图像分析迁移
-PR。合并后先在部门测试环境保持图像接单关闭，使用隔离录像验证真实视觉模型、对象存储、
-采样与任务终态事件顺序、旧重试消息恢复和长时间故障恢复；修复通知补发中的签名地址有效期
-后，再依次开启消费者和调用中心接单。MoviePy、ModelScope 和 Transformers 升级继续分别
-建立兼容迁移分支，完成真实媒体与模型回归后再合并。
+先提交并推送 `.cursor/environment.json`，在 Cloud Agents 面板确认首次 Build 成功，再让
+Cloud Agent 参与后续开发。图像分析仍先在部门测试环境保持接单关闭，使用隔离录像验证真实
+视觉模型、对象存储、采样与任务终态事件顺序、旧重试消息恢复和长时间故障恢复；修复通知
+补发中的签名地址有效期后，再依次开启消费者和调用中心接单。MoviePy、ModelScope 和
+Transformers 升级继续分别建立兼容迁移分支，完成真实媒体与模型回归后再合并。

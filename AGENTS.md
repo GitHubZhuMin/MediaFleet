@@ -38,3 +38,19 @@ SDK 访问控制平面 API，不能通过直接访问数据库或 RabbitMQ 绕�
 
 运行与变更风险相称的测试和静态检查。更新 `docs/project-status.md`，写明完成范围、验证、
 剩余风险和一个明确的下一步。持久架构决策发生变化时同步更新架构文档。
+
+## Cursor Cloud specific instructions
+
+Cloud Agent 使用仓库内的 `.cursor/environment.json`。Build 已安装 Python 3.12、uv `0.12.20`、
+FFmpeg 和 `uv sync --frozen --extra image-analysis` 的虚拟环境。直接运行：
+
+```bash
+uv run python -m pytest -q
+uv run ruff check media_platform services tests
+uv run python -m compileall media_platform services alembic
+```
+
+不要在 Cloud Agent 里启动 MySQL、RabbitMQ 或业务服务，除非当前任务明确要求集成验证。
+图像分析保持 `IMAGE_ANALYSIS_INTAKE_ENABLED=false` 和 `IMAGE_ANALYSIS_CONSUMER_ENABLED=false`。
+修改离线 ASR 或对象检测时再执行 `uv sync --frozen --extra media-worker`。凭据只来自 Cursor
+Secrets。更多说明见 `docs/development/cursor-cloud-agent.md`。
