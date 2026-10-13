@@ -69,6 +69,10 @@ MediaFleet `0.1.0` 已迁移到个人 GitHub Public 仓库
 - 新增 `20261012_0003` 增量迁移创建任务终态通知表，MySQL 外键列跟随现有任务主键字符定义，
   未修改可能已在环境执行的 `20261009_0002`。
 
+- 补充 Cloud Agent 开发环境说明：启动后提供 Python 3.12、uv 0.12.20、FFmpeg、本机 MySQL、
+  RabbitMQ 和自动启动的调用中心。默认依赖与 CI 的 `uv sync --frozen` 对齐，不安装
+  `media-worker` 模型栈和 Docker。
+
 ## 验证
 
 - `uv lock --check` 和 `uv build` 通过。
@@ -131,6 +135,10 @@ MediaFleet `0.1.0` 已迁移到个人 GitHub Public 仓库
   `/health` 返回正常，FFmpeg 5.1.9 可用。
 - Gitleaks `v8.28.0` 对本次涉及的应用、服务、迁移、测试和中文文档目录扫描未发现泄漏；
   旧业务名称、内部地址和凭据模式复核未发现新增内容。
+- Cloud Agent 本机验证：`uv lock --check`、Ruff、compileall 和 `uv run python -m pytest -q`
+  为 `679 passed, 3 skipped`。调用中心 `/health` 为 up；创建 `video.cover.extract` 后 MySQL
+  发布状态为 `PUBLISHED`，RabbitMQ `media-worker.tasks` 收到 1 条消息。安装脚本连续执行两次
+  均成功。
 
 ## 剩余风险
 
@@ -155,6 +163,8 @@ MediaFleet `0.1.0` 已迁移到个人 GitHub Public 仓库
   验证采样事件严格先于任务终态，并确认下游按 `eventType` 幂等消费。
 - MoviePy、ModelScope 和 Transformers 仍各有一个大版本升级 PR，需要结合媒体处理、模型
   加载和推理回归测试逐项评估，不能直接自动合并。
+- Cloud Agent 默认环境不包含 `media-worker` 的 Torch/FunASR 栈，也不包含 Docker，不能直接
+  做模型推理或 Compose 配置校验。
 
 ## 下一步
 
