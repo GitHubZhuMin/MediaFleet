@@ -22,13 +22,15 @@ from mediafleet_sdk.resources import (
     AsyncBindingsResource,
     AsyncNodesResource,
     AsyncRecordingServersResource,
+    AsyncRecordingsResource,
+    AsyncSecurityResource,
     AsyncSystemResource,
     AsyncTasksResource,
 )
 
 
 class AsyncMediaFleetClient:
-    """通过控制中心 REST API 异步读取 MediaFleet 状态。"""
+    """通过控制中心 REST API 异步查询和管理 MediaFleet。"""
 
     def __init__(
         self,
@@ -62,6 +64,8 @@ class AsyncMediaFleetClient:
         self.nodes = AsyncNodesResource(self)
         self.bindings = AsyncBindingsResource(self)
         self.recording_servers = AsyncRecordingServersResource(self)
+        self.recordings = AsyncRecordingsResource(self)
+        self.security = AsyncSecurityResource(self)
 
     @property
     def is_closed(self) -> bool:
@@ -95,10 +99,14 @@ class AsyncMediaFleetClient:
         model: Any,
         *,
         params: dict[str, Any] | None = None,
+        json: Any = None,
+        extra_headers: dict[str, str] | None = None,
         auth: bool = True,
     ) -> Any:
         normalized_method = method.upper()
-        headers = {"X-API-Key": self.config.api_key} if auth else None
+        headers = {"X-API-Key": self.config.api_key} if auth else {}
+        if extra_headers:
+            headers.update(extra_headers)
         safe_request_path = "/" + path.lstrip("/").split("?", 1)[0]
         for attempt in range(1, self.config.retry.max_attempts + 1):
             failure: str | None = None
@@ -107,6 +115,7 @@ class AsyncMediaFleetClient:
                     normalized_method,
                     path.lstrip("/"),
                     params=params,
+                    json=json,
                     headers=headers,
                 )
             except httpx.TimeoutException:

@@ -26,8 +26,9 @@ SDK、CLI 和 MCP 都不得直接连接 MySQL、RabbitMQ、Redis、对象存储�
 | 录制单元 | `/api/v1/recording-servers` | 查询录制服务器和容量 |
 | 写操作 | 创建任务、流绑定、录制开始/停止、失败任务重试、回调补发、录制单元状态变更 | 后续受控开放 |
 
-当前所有受保护接口共用 `X-API-Key`。服务端尚不能区分“哪个人、哪个 CLI 配置或哪个 MCP
-实例”发起了请求，也没有 `read:*`、`task:write`、`recording:write` 等权限范围。因此：
+控制中心已经增加稳定调用方身份、范围化 API Key、轮换、吊销和可信写请求审计。部署注入的
+共享 `API_KEY` 暂时作为引导凭据保留，新凭据支持 `read`、`task:write`、
+`recording:write`、`node:write` 和 `admin:write`。因此：
 
 - 第一版 SDK 可以覆盖读取和写入 API，但自动重试策略必须区分读写。
 - 第一版 CLI 默认交付只读命令，写命令进入第二阶段。
@@ -220,12 +221,12 @@ mediafleet auth logout
 - `--page`、`--page-size`；不默认拉取无限数据。
 - `--no-color`。
 
-### 5.3 第二阶段写命令
+### 5.3 第二阶段写命令（已实现）
 
 复杂请求优先支持 `--file request.json` 和标准输入，简单字段同时提供显式选项：
 
 ```text
-mediafleet task create --file task.json
+mediafleet task create --file task.json --idempotency-key STABLE_KEY
 mediafleet task retry TASK_ID --yes
 mediafleet task callback-retry TASK_ID --yes
 mediafleet binding create --file binding.json
@@ -233,10 +234,11 @@ mediafleet binding release BINDING_ID --yes
 mediafleet recording start --file recording.json
 mediafleet recording stop TASK_ID --yes
 mediafleet recorder set-status CODE STATUS --yes
-mediafleet image-analysis create --file request.json
 ```
 
-- 交互终端要求确认；CI 必须显式传 `--yes`。
+- 任务创建必须传稳定 `--idempotency-key`，同一次业务重试复用同一个值。
+- 变更既有状态的命令必须显式传 `--yes`。
+- `--file` 和 `--stdin` 必须二选一，JSON 最大 1 MiB，并拒绝未声明字段。
 - JSON 模式下错误也输出结构化对象，但写入 stderr。
 - CLI 不接收任意 RabbitMQ routing key、数据库语句、Shell 命令或环境变量名。
 
@@ -315,7 +317,7 @@ mediafleet_list_recording_servers
 
 审核点：确认 SDK 公共命名、模型和错误层级后，再进入 CLI。
 
-### 阶段 B：只读 CLI
+### 阶段 B：只读 CLI（已实现，等待独立 PR 审核）
 
 范围：
 
@@ -330,9 +332,9 @@ mediafleet_list_recording_servers
 - API Key 不出现在参数、输出或错误中。
 - Wheel 安装后 `mediafleet --help` 和只读命令可运行。
 
-审核点：确认命令层级、配置位置和输出格式后，再进入 MCP。
+审核点：实现已经完成；确认命令层级、配置位置和输出格式后，再进入 MCP。
 
-### 阶段 C：只读 MCP
+### 阶段 C：只读 MCP（已实现，等待完整功能开发结束后统一审核）
 
 范围：
 
@@ -347,16 +349,18 @@ mediafleet_list_recording_servers
 - 大列表受分页限制，返回不包含 API Key 和敏感响应头。
 - stdio 协议测试和真实测试控制中心调用通过。
 
-审核点：决定是否先补权限模型，还是仅长期保留只读 MCP。
+审核点：完整功能开发结束后，决定是否先补权限模型，还是长期保留只读 MCP。
 
-### 阶段 D：身份、权限与受控写操作
+### 阶段 D：身份、权限与受控写操作（已实现当前范围）
 
 建议单独设计和单独 PR，不与前三阶段混合：
 
-- 调用方身份和范围化凭据。
-- 服务端可信审计字段。
-- SDK 写资源和幂等策略。
-- CLI 写命令。
+- 已实现调用方身份、范围化凭据、过期、轮换和吊销。
+- 已实现写请求执行前审计和结果回写；审计不可用时拒绝写请求。
+- SDK 与 CLI 已提供凭据管理和审计查询。
+- SDK 与 CLI 已开放任务、绑定、录制和录制服务器状态写操作。
+- 写操作使用可信 principal 记录创建人或更新人，忽略请求体中的旧操作者字段。
+- JSON 输入有大小上限并使用严格类型模型，SDK 不自动重试写请求。
 - 经单独批准的 MCP 写工具。
 
 ## 8. PR 拆分建议

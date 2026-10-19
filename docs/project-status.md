@@ -81,6 +81,35 @@ MediaFleet `0.1.0` 已迁移到个人 GitHub Public 仓库
   分类、GET/HEAD 有限重试、`Retry-After`、分页筛选、UTC 时间兼容和未知字段向后兼容。
 - 根项目使用 uv workspace 管理 SDK；CI 增加 Python 3.10–3.12 SDK 测试、轻量依赖隔离、
   SDK 构建和导入检查，并将 SDK 纳入 Ruff 与 Compileall。
+- 新增独立 `mediafleet-cli` 包，通过 SDK 提供健康、总览、任务、产物、节点、绑定和录制
+  服务器只读命令，支持 Rich 人工输出、稳定 JSON、有界分页、常用筛选和固定退出码。
+- CLI context 配置只保存 URL 与可选 CA 文件并使用原子写入；API Key 只从环境变量或系统
+  keyring 读取，不提供明文命令参数，也不会写入配置文件。
+- CI 增加 Python 3.10–3.12 CLI 测试、轻量依赖检查、SDK/CLI Wheel 成对安装和命令入口检查。
+- 新增独立 `mediafleet-mcp` 包，使用官方 Python MCP SDK 2.x 和 stdio 传输，通过异步 SDK
+  提供健康、总览、任务、产物、节点、绑定和录制服务器 8 个只读工具。
+- MCP 工具统一返回 `ok/data/error` 结构并限制分页；任务任意字段递归脱敏与限长，产物、节点
+  和录制服务器响应不向模型暴露签名 URL、内部管理地址或本地目录。
+- CI 增加 Python 3.10–3.12 MCP 测试、SDK/MCP Wheel 成对安装和服务端依赖边界检查。
+- 新增持久调用方身份和范围化 API 凭据，支持 `read`、`task:write`、`recording:write`、
+  `node:write` 和 `admin:write`；共享 `API_KEY` 暂时作为部署引导凭据兼容。
+- API Key 使用随机秘密和 PBKDF2-SHA256 摘要，数据库不保存明文；凭据支持过期、立即轮换和
+  吊销，创建与轮换时明文只返回一次。
+- 受保护写请求在执行前写入可信身份审计，完成后记录 HTTP 结果；审计不可用时失败关闭，
+  幂等键仅保存 SHA-256。两条旧视频处理兼容接口也补齐统一认证。
+- SDK 同步和异步客户端增加安全资源；CLI 增加权限范围、凭据创建/列表/轮换/吊销和审计命令，
+  轮换与吊销必须显式传入 `--yes`。MCP 继续保持只读。
+- SDK 同步和异步客户端增加任务创建、失败任务重试、回调补发、流绑定创建/释放、录制
+  开始/停止和录制服务器状态更新资源；任务创建要求稳定 `Idempotency-Key`，所有写请求默认
+  不自动重试。
+- CLI 增加对应业务写命令；复杂请求只接受二选一的 UTF-8 JSON 文件或标准输入，限制为
+  1 MiB 并拒绝额外字段。重试、释放、停止录制和状态变更必须显式传入 `--yes`。
+- 通用任务创建、任务重试、流绑定释放和录制服务器状态更新改用认证 principal 作为可信
+  创建人或更新人；最小权限映射覆盖 `task:write`、`recording:write` 和 `admin:write`。
+- 控制中心新增 `CONTROL_CENTER_BOOTSTRAP_API_KEY_ENABLED` 类型化开关；关闭共享引导密钥前
+  必须在 MySQL 中存在有效的 `admin:write` 管理凭据，否则拒绝启动，避免管理入口锁死。
+- 旧任务、媒体文件和录制接口 Schema 已迁移到 Pydantic V2 的 `ConfigDict`、
+  `field_validator` 和 `model_dump`，原有字段、OpenAPI 示例与毫秒时间格式保持兼容。
 
 ## 验证
 
@@ -155,14 +184,54 @@ MediaFleet `0.1.0` 已迁移到个人 GitHub Public 仓库
   构建成功，独立 SDK 环境确认不包含 FastAPI、SQLAlchemy、Pika 或 Torch。
 - SDK 实施后的根仓库全量验证为 `681 passed, 3 skipped`；Gitleaks `v8.28.0` 对 SDK、契约
   测试、相关文档、CI、根构建配置和锁文件扫描未发现泄漏。
+- CLI 单元和 SDK 请求链路测试 `32 passed`，覆盖全部只读命令、分页与筛选、context、凭据
+  标准输入、keyring 不可用、JSON 标准输出/错误输出、退出码、密钥不回显和公开健康端点不发送
+  认证头。
+- CLI sdist 与 Wheel 构建成功；在干净 Python 3.12 环境中成对安装 SDK/CLI Wheel 后，
+  `mediafleet --help` 和 `mediafleet version --json` 通过，且环境不包含 FastAPI、SQLAlchemy、
+  Pika 或 Torch。
+- CLI 实施后的根仓库全量验证为 `681 passed, 3 skipped`；`uv lock --check`、Ruff、额外
+  F401 检查、Compileall 和 `git diff --check` 通过。
+- MCP 单元、工具契约和 stdio 协议测试 `23 passed`，覆盖 8 个工具、只读注解、分页上限、
+  筛选透传、结构化错误、敏感字段裁剪，以及通过真实 stdio 子进程和临时 HTTP 控制中心完成
+  的异步 SDK 调用与认证头验证；Python 3.10、3.11、3.12 均通过。
+- MCP sdist 与 Wheel 构建成功；在干净 Python 3.12 环境中成对安装 SDK/MCP Wheel 后可发现
+  8 个工具，且环境不包含 FastAPI、SQLAlchemy、Pika、Torch 或 keyring。
+- CLI 与 MCP 独立依赖环境执行 `pip-audit` 均未发现已知漏洞；本地未发布的三个 MediaFleet
+  包按工具预期跳过公共索引查询。
+- MCP 实施后的根仓库全量验证为 `681 passed, 3 skipped`；`uv lock --check`、Ruff、额外
+  F401 检查、Compileall 和 `git diff --check` 通过。
+- 身份权限专项、数据库迁移、SDK 和 CLI 验证共 `73 passed`；控制中心回归 `86 passed`，
+  Ruff 和 `git diff --check` 通过。Alembic head 更新为 `20261019_0005`，空 SQLite 数据库
+  升级与回退验证覆盖三张安全表。
+- 身份权限基础层实施后的根仓库全量验证为 `685 passed, 3 skipped`；根包、SDK、CLI 和 MCP
+  的 sdist/Wheel 构建、Compileall、Ruff、`uv lock --check` 和 `git diff --check` 均通过。
+- 受控业务写入口专项验证：SDK、CLI 与 OpenAPI 契约 `81 passed`，控制中心任务、权限、绑定
+  和录制相关 `42 passed`；覆盖同步/异步请求、路径编码、幂等键、权限拒绝、可信操作者、
+  JSON 输入限制和显式确认。
+- 本轮完成后的根仓库全量验证为 `689 passed, 3 skipped`；根包、SDK、CLI 和 MCP 的
+  sdist/Wheel 构建、Compileall、Ruff、`uv lock --check` 和 `git diff --check` 均通过。
+- 共享引导密钥开关与配置专项验证为 `26 passed`，覆盖默认兼容、关闭后拒绝共享密钥、有效
+  管理凭据放行，以及只读、过期、吊销和调用方停用等防锁死场景。
+- 本轮最新全量验证为 `698 passed, 3 skipped`；根包、SDK、CLI 和 MCP 的 sdist/Wheel 构建、
+  17 份 Compose 配置、Compileall、Ruff、`uv lock --check` 和 `git diff --check` 均通过。
+- Pydantic V2 严格弃用检查下全仓验证为 `701 passed, 3 skipped`，测试将
+  `PydanticDeprecatedSince20` 提升为错误；旧录制请求校验、OpenAPI 示例和毫秒时间序列化均有
+  回归覆盖。
+- 稳定 Worker 租约续租回归测试：处理器仍运行超过初始租约，首次续租窗口由 100 毫秒扩大到
+  1 秒，避免 Python 3.10 CI 高负载时后台线程尚未获得调度便被误判为失去租约；生产租约条件
+  与过期写入保护保持不变。专项测试连续 6 次通过，全仓验证为 `701 passed, 3 skipped`。
+- PR #14 已重新基于包含 SDK 与运行配置更新的最新 `main` 排列；运行配置继续使用
+  `20261016_0004`，安全凭据迁移顺延为 `20261019_0005` 并依赖前者，Alembic 保持单一 head。
+  冲突解决后的专项验证为 `38 passed`，全仓验证为 `738 passed, 3 skipped`；Ruff、Compileall、
+  `uv lock --check`、17 份 Compose 配置、Alembic `base -> head -> base` 往返和
+  `git diff --check` 通过。
 
 ## 剩余风险
 
 - 新增运行配置表须在服务升级前由单个迁移执行者部署。首次配置导入、现有 RabbitMQ
   队列 ACK 超时策略、在线实例热更新回执和任务锁版仍需在部门环境验证；配置加密密钥
   必须在控制中心及两个分析服务一致并由部署平台保管。
-
-- 兼容 Schema 仍会产生 Pydantic V2 弃用警告，应在 Pydantic V3 前完成现代化。
 - 最新 Starlette 测试客户端提示 `httpx` 集成将弃用并迁移到 `httpx2`。
 - 可选模型、FFmpeg 构建、Ultralytics 部署和厂商数据库驱动需要按部署环境单独审查许可证。
 - GPU Worker 实际 CUDA 推理仍需在有 NVIDIA Container Toolkit 和兼容 GPU 的 Linux
@@ -172,7 +241,8 @@ MediaFleet `0.1.0` 已迁移到个人 GitHub Public 仓库
 - 部分旧兼容 API 和模型尚未迁移到统一的新应用服务。
 - 容器仍以 root 用户运行，尚未增加只读文件系统、Linux capability 限制和镜像安全扫描。
 - 回调、下载和流媒体 URL 尚未建立按用途配置的主机或 CIDR 允许列表。
-- 当前内部接口仍使用共享 API Key，尚未提供调用方身份、权限范围、轮换和撤销机制。
+- 共享引导 `API_KEY` 为兼容升级默认启用；部门部署必须先给管理方和全部节点签发、验证最小
+  权限凭据，再主动关闭。节点迁移完成前关闭会导致心跳和内部调用认证失败。
 - 当前仓库已公开，公开历史仍需持续执行 Secret Scan；分支保护和 required checks 需要在
   GitHub 仓库规则中确认已应用到 `main`。
 - 图像分析尚未在部门真实录像、对象存储和视觉模型上完成容量及故障恢复验收，接单与消费
@@ -183,14 +253,20 @@ MediaFleet `0.1.0` 已迁移到个人 GitHub Public 仓库
   验证采样事件严格先于任务终态，并确认下游按 `eventType` 幂等消费。
 - MoviePy、ModelScope 和 Transformers 仍各有一个大版本升级 PR，需要结合媒体处理、模型
   加载和推理回归测试逐项评估，不能直接自动合并。
-- SDK 当前仍使用共享 API Key，只能继承控制中心现有的粗粒度认证，不能区分调用方身份或
-  权限范围；因此本阶段保持只读，尚未发布 PyPI，也未承诺稳定公共 API。
+- SDK 已支持共享引导密钥和范围化凭据，但共享 `API_KEY` 仍具有全权限；正式部署应为 CLI、
+  节点和自动化分别签发最小权限凭据。SDK 尚未发布 PyPI，也未承诺稳定公共 API。
+- CLI 尚未连接部门真实控制中心验证证书、keyring 后端和人工表格显示；SDK 与 CLI 均未发布
+  PyPI，因此当前安装验证需要同时提供两个同版本本地 Wheel。
+- MCP 尚未接入部门真实 MCP 客户端和控制中心验证长时间 stdio 会话、自定义 CA 与模型调用
+  体验；官方 MCP SDK 包同时包含未启用的 HTTP 传输依赖，发布前仍需持续进行依赖审计。
 
 ## 下一步
 
-在部门测试环境备份 MySQL 后执行 `20261016_0004` 迁移，单实例导入两类分析服务原部署
-配置，再验证配置发布/回滚、真实任务锁版、RabbitMQ ACK 超时与回调兼容。图像接单继续
-保持关闭，直到录像、对象存储、视觉模型、终态通知和签名地址补发通过联调。
-审核 SDK 的公共命名、模型和错误层级，合并独立 SDK PR 后从最新 `main` 创建 CLI 分支，
-按已确认方案实现只读命令、配置、凭据库、JSON 输出和稳定退出码。SDK 在进入 PyPI 发布流程
-前继续保持 `0.1.0` Alpha，并补版本发布、兼容性和弃用策略。
+在部门测试环境备份 MySQL 后升级到 Alembic head，依次应用运行配置 `20261016_0004` 与安全
+凭据 `20261019_0005`，再由单实例导入两类分析服务原部署配置，验证配置发布/回滚、真实任务
+锁版、RabbitMQ ACK 超时与回调兼容。图像接单继续保持关闭，直到录像、对象存储、视觉模型、
+终态通知和签名地址补发通过联调。
+在部门测试控制中心验证真实证书、keyring、最小权限凭据、范围拒绝、轮换、吊销、审计和
+全部 CLI 写命令，并补充重复请求、连接中断和回调补发的环境验收。MCP 默认继续只读；确认
+是否需要模型触发写操作前，先完成独立允许列表和逐工具风险审核。三个包进入 PyPI 前继续
+保持 `0.1.0` Alpha。

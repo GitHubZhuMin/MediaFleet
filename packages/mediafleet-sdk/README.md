@@ -1,7 +1,7 @@
 # MediaFleet Python SDK
 
-`mediafleet-sdk` 是 MediaFleet 控制中心 REST API 的类型化 Python 客户端。当前版本只提供
-查询能力，适合运维脚本、后续 `mediafleet` CLI 和 MCP Server 复用。
+`mediafleet-sdk` 是 MediaFleet 控制中心 REST API 的类型化 Python 客户端。除只读资源外，
+当前还提供范围化 API 凭据的创建、轮换、吊销与审计查询，供受控运维使用。
 
 SDK 只依赖 `httpx` 与 `pydantic`，不会安装 FastAPI、SQLAlchemy、Pika 或媒体模型。它不会
 直接访问 MySQL、RabbitMQ、对象存储或节点本地文件。
@@ -49,7 +49,7 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-## 只读资源
+## 资源
 
 | 调用 | 用途 |
 | --- | --- |
@@ -62,8 +62,25 @@ asyncio.run(main())
 | `client.nodes.list(...)` | 分页查询节点 |
 | `client.bindings.list(...)` | 分页查询流绑定 |
 | `client.recording_servers.list()` | 查询录制服务器 |
+| `client.security.scopes()` | 查询可分配权限范围 |
+| `client.security.list_credentials()` | 查询凭据元数据，不返回密钥明文 |
+| `client.security.create_credential(...)` | 创建凭据，明文只返回一次 |
+| `client.security.rotate_credential(id)` | 立即轮换凭据 |
+| `client.security.revoke_credential(id)` | 吊销凭据 |
+| `client.security.list_audit_events(...)` | 查询写请求审计 |
+| `client.tasks.create(request, idempotency_key=...)` | 创建通用媒体任务 |
+| `client.tasks.retry(task_id)` | 重新投递失败或已取消任务 |
+| `client.tasks.retry_callback(task_id)` | 补发终态任务业务回调 |
+| `client.bindings.create(request)` | 创建或复用流绑定 |
+| `client.bindings.release(binding_id)` | 幂等释放流绑定 |
+| `client.recordings.start(request)` | 开始录制 |
+| `client.recordings.stop(task_id)` | 停止录制并继续后处理 |
+| `client.recording_servers.update_status(code, status)` | 更新录制服务器运维状态 |
 
 同步与异步客户端使用相同资源名；异步方法需要 `await`。
+
+任务创建必须提供 8 到 128 个字符的稳定幂等键。同一次业务请求因网络或进程重启而再次提交
+时必须复用原值。写请求模型拒绝额外字段，POST、PATCH 和 DELETE 不会自动重试。
 
 ## 认证和错误
 
